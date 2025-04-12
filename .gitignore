@@ -2,4 +2,7 @@ build
 node_modules
 .wrangler
 
-.dev.vars*
+.dev.vars
+.env*
+cf.sh
+wrangler.jsonc

@@ -1,19 +1,20 @@
 package main
 
 import (
-	"io"
-	"net/http"
+	"github.com/alexraskin/goShareX/server"
 
 	"github.com/syumai/workers"
+	"github.com/syumai/workers/cloudflare"
 )
 
+// cloudflare binding
+const bucketName = "IMAGE_BUCKET"
+
+var authKey = cloudflare.Getenv("SHAREX_AUTH_KEY")
+
 func main() {
-	http.HandleFunc("/hello", func(w http.ResponseWriter, req *http.Request) {
-		msg := "Hello!"
-		w.Write([]byte(msg))
+	workers.Serve(&server.Server{
+		BucketName: bucketName,
+		AuthKey:    authKey,
 	})
-	http.HandleFunc("/echo", func(w http.ResponseWriter, req *http.Request) {
-		io.Copy(w, req.Body)
-	})
-	workers.Serve(nil) // use http.DefaultServeMux
 }

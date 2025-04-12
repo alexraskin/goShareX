@@ -1,57 +1,18 @@
-# worker-template-tinygo
+# GoShareX
 
-- A template for starting a Cloudflare Worker project with tinygo.
-- This template uses [`workers`](https://github.com/syumai/workers) package to run an HTTP server.
+ShareX uploader service built with TinyGo and Cloudflare Workers
+
+## Setup
+
+1. Clone the repository
+2. Copy `.dev.vars.example` to `.dev.vars` and set the environment variables
+3. Copy `wrangler.jsonc.example` to `wrangler.jsonc` change the required fields
+4. Install dependencies: `go mod download`
+5. Run locally: `npm run start`
+6. Deploy: `npm run deploy`
 
 ## Usage
 
-- `main.go` includes simple HTTP server implementation. Feel free to edit this code and implement your own HTTP server.
-
-## Requirements
-
-- Node.js
-- tinygo 0.35.0 or later
-
-## Getting Started
-
-- Create a new worker project using this template.
-
-```console
-npm create cloudflare@latest -- --template github.com/syumai/workers/_templates/cloudflare/worker-tinygo
-```
-
-- Initialize a project.
-
-```console
-cd my-app # A directory of the project created by the above command
-go mod init
-go mod tidy
-npm start # start running dev server
-curl http://localhost:8787/hello # outputs "Hello!"
-```
-
-## Development
-
-### Commands
-
-```
-npm start      # run dev server
-# or
-go run .       # run dev server without Wrangler (Cloudflare-related features are not available)
-npm run build  # build Go Wasm binary
-npm run deploy # deploy worker
-```
-
-### Testing dev server
-
-- Just send HTTP request using some tools like curl.
-
-```
-$ curl http://localhost:8787/hello
-Hello!
-```
-
-```
-$ curl -X POST -d "test message" http://localhost:8787/echo
-test message
-```
+1. Visit `/config?authKey=your_auth_key` to download the ShareX configuration
+2. Import the configuration into ShareX
+3. Start uploading images
