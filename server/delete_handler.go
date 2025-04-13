@@ -1,6 +1,7 @@
 package server
 
 import (
+	"log"
 	"net/http"
 )
 
@@ -31,19 +32,22 @@ func (h *deleteHandler) delete(w http.ResponseWriter, r *http.Request) {
 
 	fileName := r.URL.Query().Get("fileName")
 	if fileName == "" {
+		log.Println("Missing filename")
 		http.Error(w, `{"success": false, "message": "Missing filename"}`, http.StatusBadRequest)
 		return
 	}
 
 	bucket, err := h.server.bucket()
 	if err != nil {
-		handleErr(w, err)
+		log.Println(err)
+		http.Error(w, `{"success": false, "message": "Internal server error"}`, http.StatusInternalServerError)
 		return
 	}
 
 	err = bucket.Delete(fileName)
 	if err != nil {
-		handleErr(w, err)
+		log.Println(err)
+		http.Error(w, `{"success": false, "message": "Internal server error"}`, http.StatusInternalServerError)
 		return
 	}
 

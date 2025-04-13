@@ -8,8 +8,8 @@ import (
 )
 
 type Server struct {
-	BucketName string
 	AuthKey    string
+	BucketName string
 }
 
 func (s *Server) bucket() (*r2.Bucket, error) {
@@ -22,6 +22,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	mux.Handle("/upload", NewUploadHandler(s))
 	mux.Handle("/delete", NewDeleteHandler(s))
 	mux.Handle("/config", NewConfigHandler(s))
+	mux.Handle("/stats", NewStatsHandler(s))
 
 	mux.Handle("/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method == http.MethodGet {
@@ -30,8 +31,13 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		w.WriteHeader(http.StatusNotFound)
-		w.Write([]byte("route not found\n"))
+		w.Write([]byte("Not found"))
 	}))
 
 	mux.ServeHTTP(w, r)
+}
+
+func authenticate(req *http.Request, s *Server) bool {
+	authKey := req.URL.Query().Get("authKey")
+	return authKey == s.AuthKey
 }

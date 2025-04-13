@@ -9,6 +9,7 @@ ShareX uploader service built with TinyGo and Cloudflare Workers
 3. Copy `wrangler.jsonc.example` to `wrangler.jsonc` change the required fields
 4. Install dependencies: `go mod download`
 5. Run locally: `npm run start`
+6. Create the secret `wrangler secret put SHAREX_AUTH_KEY`
 6. Deploy: `npm run deploy`
 
 ## Usage

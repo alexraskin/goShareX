@@ -3,18 +3,21 @@ package server
 import (
 	"fmt"
 	"io"
+	"log"
 	"net/http"
 )
 
 func (s *Server) getKey(w http.ResponseWriter, r *http.Request, key string) {
 	bucket, err := s.bucket()
 	if err != nil {
-		handleErr(w, err)
+		log.Println(err)
+		http.Error(w, `{"success": false, "message": "Internal server error"}`, http.StatusInternalServerError)
 		return
 	}
 	imgObj, err := bucket.Get(key)
 	if err != nil {
-		handleErr(w, err)
+		log.Println(err)
+		http.Error(w, `{"success": false, "message": "Internal server error"}`, http.StatusInternalServerError)
 		return
 	}
 	if imgObj == nil {

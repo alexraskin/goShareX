@@ -7,14 +7,14 @@ import (
 	"github.com/syumai/workers/cloudflare"
 )
 
-// cloudflare binding
+// cloudflare bindings
 const bucketName = "IMAGE_BUCKET"
 
 var authKey = cloudflare.Getenv("SHAREX_AUTH_KEY")
 
 func main() {
 	workers.Serve(&server.Server{
-		BucketName: bucketName,
-		AuthKey:    authKey,
+		AuthKey:     authKey,
+		BucketName:  bucketName,
 	})
 }

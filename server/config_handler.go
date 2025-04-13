@@ -25,26 +25,28 @@ func (h *configHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	h.getConfig(w, req)
 }
 
+type shareXConfig struct {
+	Version         string            `json:"Version"`
+	Name            string            `json:"Name"`
+	DestinationType string            `json:"DestinationType"`
+	RequestMethod   string            `json:"RequestMethod"`
+	RequestURL      string            `json:"RequestURL"`
+	Parameters      map[string]string `json:"Parameters"`
+	Body            string            `json:"Body"`
+	FileFormName    string            `json:"FileFormName"`
+	URL             string            `json:"URL"`
+	DeletionURL     string            `json:"DeletionURL"`
+	ErrorMessage    string            `json:"ErrorMessage"`
+}
+
 func (h *configHandler) getConfig(w http.ResponseWriter, req *http.Request) {
 	if !authenticate(req, h.server) {
 		http.Error(w, `{"success": false, "message": "Invalid authkey"}`, http.StatusUnauthorized)
 		return
 	}
-	baseURL := fmt.Sprintf("%s://%s", getScheme(req), req.Host)
+	baseURL := fmt.Sprintf("https://%s", req.Host)
 
-	config := struct {
-		Version         string            `json:"Version"`
-		Name            string            `json:"Name"`
-		DestinationType string            `json:"DestinationType"`
-		RequestMethod   string            `json:"RequestMethod"`
-		RequestURL      string            `json:"RequestURL"`
-		Parameters      map[string]string `json:"Parameters"`
-		Body            string            `json:"Body"`
-		FileFormName    string            `json:"FileFormName"`
-		URL             string            `json:"URL"`
-		DeletionURL     string            `json:"DeletionURL"`
-		ErrorMessage    string            `json:"ErrorMessage"`
-	}{
+	config := shareXConfig{
 		Version:         "14.0.1",
 		Name:            "Sadge Uploader",
 		DestinationType: "ImageUploader",
