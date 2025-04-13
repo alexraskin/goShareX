@@ -75,8 +75,6 @@ func (h *uploadHandler) upload(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	log.Println(fileName)
-
 	objects, err := bucket.List()
 	if err != nil {
 		log.Println(err)
@@ -85,7 +83,6 @@ func (h *uploadHandler) upload(w http.ResponseWriter, r *http.Request) {
 	}
 
 	for _, obj := range objects.Objects {
-		log.Println(obj.Key)
 		if obj.Key == fileName {
 			w.WriteHeader(http.StatusBadRequest)
 			http.Error(w, `{"success": false, "message": "File already exists"}`, http.StatusBadRequest)
