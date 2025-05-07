@@ -3,26 +3,22 @@ package server
 import (
 	"fmt"
 	"io"
-	"log"
 	"net/http"
 )
 
 func (s *Server) getKey(w http.ResponseWriter, r *http.Request, key string) {
 	bucket, err := s.bucket()
 	if err != nil {
-		log.Println(err)
-		http.Error(w, `{"success": false, "errorMessage": "Internal server error"}`, http.StatusInternalServerError)
+		s.handleError(w, "Internal server error", http.StatusInternalServerError, err.Error())
 		return
 	}
 	resource, err := bucket.Get(key)
 	if err != nil {
-		log.Println(err)
-		http.Error(w, `{"success": false, "errorMessage": "Internal server error"}`, http.StatusInternalServerError)
+		s.handleError(w, "Internal server error", http.StatusInternalServerError, err.Error())
 		return
 	}
 	if resource == nil {
-		w.WriteHeader(http.StatusNotFound)
-		w.Write([]byte(fmt.Sprintf("resource not found: %s", key)))
+		s.handleError(w, fmt.Sprintf("resource not found: %s", key), http.StatusNotFound, "")
 		return
 	}
 	w.Header().Set("ETag", fmt.Sprintf("W/%s", resource.HTTPETag))

@@ -3,7 +3,6 @@ package server
 import (
 	"encoding/json"
 	"fmt"
-	"log"
 	"math/rand"
 	"net/http"
 	"strings"
@@ -44,8 +43,7 @@ func NewUploadHandler(s *Server) http.Handler {
 
 func (h *uploadHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
-		w.WriteHeader(http.StatusMethodNotAllowed)
-		w.Write([]byte("method not allowed\n"))
+		h.server.handleError(w, "Method not allowed", http.StatusMethodNotAllowed, "")
 		return
 	}
 	h.upload(w, r)
@@ -60,7 +58,7 @@ type uploadResponse struct {
 
 func (h *uploadHandler) upload(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		h.server.handleError(w, "Method not allowed", http.StatusMethodNotAllowed, "")
 		return
 	}
 	fileSlug := randomID(6)
@@ -69,7 +67,7 @@ func (h *uploadHandler) upload(w http.ResponseWriter, r *http.Request) {
 	contentLength := r.Header.Get("Content-Length")
 
 	if contentType == "" || contentLength == "" {
-		http.Error(w, `{"success": false, "errorMessage": "Missing content-length or content-type"}`, http.StatusBadRequest)
+		h.server.handleError(w, "Missing content-length or content-type", http.StatusBadRequest, "")
 		return
 	}
 
@@ -81,22 +79,19 @@ func (h *uploadHandler) upload(w http.ResponseWriter, r *http.Request) {
 
 	bucket, err := h.server.bucket()
 	if err != nil {
-		log.Println(err)
-		http.Error(w, `{"success": false, "errorMessage": "Internal server error"}`, http.StatusInternalServerError)
+		h.server.handleError(w, "Internal server error", http.StatusInternalServerError, err.Error())
 		return
 	}
 
 	objects, err := bucket.List()
 	if err != nil {
-		log.Println(err)
-		http.Error(w, `{"success": false, "errorMessage": "Internal server error"}`, http.StatusInternalServerError)
+		h.server.handleError(w, "Internal server error", http.StatusInternalServerError, err.Error())
 		return
 	}
 
 	for _, obj := range objects.Objects {
 		if obj.Key == fileName {
-			w.WriteHeader(http.StatusBadRequest)
-			http.Error(w, `{"success": false, "errorMessage": "File already exists"}`, http.StatusBadRequest)
+			h.server.handleError(w, "File already exists", http.StatusBadRequest, "")
 			return
 		}
 	}
@@ -112,8 +107,7 @@ func (h *uploadHandler) upload(w http.ResponseWriter, r *http.Request) {
 		},
 	})
 	if err != nil {
-		log.Println(err)
-		http.Error(w, `{"success": false, "errorMessage": "Internal server error"}`, http.StatusInternalServerError)
+		h.server.handleError(w, "Internal server error", http.StatusInternalServerError, err.Error())
 		return
 	}
 

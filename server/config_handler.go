@@ -45,7 +45,7 @@ type parameters struct {
 
 func (h *configHandler) getConfig(w http.ResponseWriter, req *http.Request) {
 	if !authenticate(req, h.server) {
-		http.Error(w, `{"success": false, "message": "Invalid authkey"}`, http.StatusUnauthorized)
+		h.server.handleError(w, "Invalid authkey", http.StatusUnauthorized, "")
 		return
 	}
 	baseURL := fmt.Sprintf("https://%s", req.Host)

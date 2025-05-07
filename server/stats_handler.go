@@ -2,7 +2,6 @@ package server
 
 import (
 	"encoding/json"
-	"log"
 	"net/http"
 )
 
@@ -18,35 +17,32 @@ func NewStatsHandler(s *Server) http.Handler {
 
 func (h *statsHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
-		w.WriteHeader(http.StatusMethodNotAllowed)
-		w.Write([]byte("method not allowed\n"))
+		h.server.handleError(w, "Method not allowed", http.StatusMethodNotAllowed, "")
 		return
 	}
 	h.stats(w, r)
 }
 
 type statsResponse struct {
-	Success          bool `json:"success"`
-	ImageUploadCount int  `json:"imageUploadCount"`
+	Success       bool `json:"success"`
+	ResourceCount int  `json:"resourceCount"`
 }
 
 func (h *statsHandler) stats(w http.ResponseWriter, r *http.Request) {
 	bucket, err := h.server.bucket()
 	if err != nil {
-		log.Println(err)
-		http.Error(w, `{"success": false, "errorMessage": "Internal server error"}`, http.StatusInternalServerError)
+		h.server.handleError(w, "Internal server error", http.StatusInternalServerError, err.Error())
 		return
 	}
 
 	objects, err := bucket.List()
 	if err != nil {
-		log.Println(err)
-		http.Error(w, `{"success": false, "errorMessage": "Internal server error"}`, http.StatusInternalServerError)
+		h.server.handleError(w, "Internal server error", http.StatusInternalServerError, err.Error())
 		return
 	}
 
 	json.NewEncoder(w).Encode(statsResponse{
-		Success:          true,
-		ImageUploadCount: len(objects.Objects),
+		Success:       true,
+		ResourceCount: len(objects.Objects),
 	})
 }
