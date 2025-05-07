@@ -58,7 +58,7 @@ func (h *configHandler) getConfig(w http.ResponseWriter, req *http.Request) {
 		Body:         "Binary",
 		FileFormName: "file",
 		URL:          "{json:image}",
-		DeletionURL:  "{json:deleteUrl}",
+		DeletionURL:  "{json:delete}",
 		ErrorMessage: "{json:error}",
 	}
 
