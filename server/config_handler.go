@@ -26,17 +26,21 @@ func (h *configHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 }
 
 type shareXConfig struct {
-	Version         string            `json:"Version"`
-	Name            string            `json:"Name"`
-	DestinationType string            `json:"DestinationType"`
-	RequestMethod   string            `json:"RequestMethod"`
-	RequestURL      string            `json:"RequestURL"`
-	Parameters      map[string]string `json:"Parameters"`
-	Body            string            `json:"Body"`
-	FileFormName    string            `json:"FileFormName"`
-	URL             string            `json:"URL"`
-	DeletionURL     string            `json:"DeletionURL"`
-	ErrorMessage    string            `json:"ErrorMessage"`
+	Version         string     `json:"Version"`
+	Name            string     `json:"Name"`
+	DestinationType string     `json:"DestinationType"`
+	RequestMethod   string     `json:"RequestMethod"`
+	RequestURL      string     `json:"RequestURL"`
+	Parameters      parameters `json:"Parameters"`
+	Body            string     `json:"Body"`
+	FileFormName    string     `json:"FileFormName"`
+	URL             string     `json:"URL"`
+	DeletionURL     string     `json:"DeletionURL"`
+	ErrorMessage    string     `json:"ErrorMessage"`
+}
+
+type parameters struct {
+	AuthKey string `json:"authKey"`
 }
 
 func (h *configHandler) getConfig(w http.ResponseWriter, req *http.Request) {
@@ -49,17 +53,17 @@ func (h *configHandler) getConfig(w http.ResponseWriter, req *http.Request) {
 	config := shareXConfig{
 		Version:         "14.0.1",
 		Name:            "Sadge Uploader",
-		DestinationType: "ImageUploader",
+		DestinationType: "ImageUploader, TextUploader, FileUploader",
 		RequestMethod:   "POST",
 		RequestURL:      baseURL + "/upload",
-		Parameters: map[string]string{
-			"authKey": h.server.AuthKey,
+		Parameters: parameters{
+			AuthKey: h.server.AuthKey,
 		},
 		Body:         "Binary",
 		FileFormName: "file",
-		URL:          "{json:image}",
-		DeletionURL:  "{json:delete}",
-		ErrorMessage: "{json:error}",
+		URL:          "{json:fileURL}",
+		DeletionURL:  "{json:deleteURL}",
+		ErrorMessage: "{json:errorMessage}",
 	}
 
 	w.Header().Set("Content-Type", "application/json")

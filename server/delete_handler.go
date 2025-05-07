@@ -26,28 +26,28 @@ func (h *deleteHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 func (h *deleteHandler) delete(w http.ResponseWriter, r *http.Request) {
 	if !authenticate(r, h.server) {
-		http.Error(w, `{"success": false, "message": "Invalid authkey"}`, http.StatusUnauthorized)
+		http.Error(w, `{"success": false, "errorMessage": "Invalid authkey"}`, http.StatusUnauthorized)
 		return
 	}
 
 	fileName := r.URL.Query().Get("fileName")
 	if fileName == "" {
 		log.Println("Missing filename")
-		http.Error(w, `{"success": false, "message": "Missing filename"}`, http.StatusBadRequest)
+		http.Error(w, `{"success": false, "errorMessage": "Missing filename"}`, http.StatusBadRequest)
 		return
 	}
 
 	bucket, err := h.server.bucket()
 	if err != nil {
 		log.Println(err)
-		http.Error(w, `{"success": false, "message": "Internal server error"}`, http.StatusInternalServerError)
+		http.Error(w, `{"success": false, "errorMessage": "Internal server error"}`, http.StatusInternalServerError)
 		return
 	}
 
 	err = bucket.Delete(fileName)
 	if err != nil {
 		log.Println(err)
-		http.Error(w, `{"success": false, "message": "Internal server error"}`, http.StatusInternalServerError)
+		http.Error(w, `{"success": false, "errorMessage": "Internal server error"}`, http.StatusInternalServerError)
 		return
 	}
 

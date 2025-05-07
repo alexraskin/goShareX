@@ -12,6 +12,24 @@ import (
 	"github.com/syumai/workers/cloudflare/r2"
 )
 
+var extensionMap = map[string]string{
+	"image/jpeg":      "jpg",
+	"image/png":       "png",
+	"image/gif":       "gif",
+	"image/webp":      "webp",
+	"image/svg+xml":   "svg",
+	"image/heic":      "heic",
+	"image/heif":      "heif",
+	"video/mp4":       "mp4",
+	"video/webm":      "webm",
+	"video/mov":       "mov",
+	"video/avi":       "avi",
+	"video/mkv":       "mkv",
+	"video/flv":       "flv",
+	"text/plain":      "txt",
+	"application/pdf": "pdf",
+}
+
 var seededRand = rand.New(rand.NewSource(time.Now().UnixNano()))
 
 type uploadHandler struct {
@@ -35,8 +53,9 @@ func (h *uploadHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 type uploadResponse struct {
 	Success bool   `json:"success"`
-	Image   string `json:"image"`
-	Delete  string `json:"delete"`
+	File    string `json:"fileURL"`
+	Delete  string `json:"deleteURL"`
+	Error   string `json:"errorMessage"`
 }
 
 func (h *uploadHandler) upload(w http.ResponseWriter, r *http.Request) {
@@ -50,16 +69,8 @@ func (h *uploadHandler) upload(w http.ResponseWriter, r *http.Request) {
 	contentLength := r.Header.Get("Content-Length")
 
 	if contentType == "" || contentLength == "" {
-		http.Error(w, `{"success": false, "message": "Missing content-length or content-type"}`, http.StatusBadRequest)
+		http.Error(w, `{"success": false, "errorMessage": "Missing content-length or content-type"}`, http.StatusBadRequest)
 		return
-	}
-
-	extensionMap := map[string]string{
-		"image/jpeg":    "jpg",
-		"image/png":     "png",
-		"image/gif":     "gif",
-		"image/webp":    "webp",
-		"image/svg+xml": "svg",
 	}
 
 	fileExt, ok := extensionMap[contentType]
@@ -71,28 +82,29 @@ func (h *uploadHandler) upload(w http.ResponseWriter, r *http.Request) {
 	bucket, err := h.server.bucket()
 	if err != nil {
 		log.Println(err)
-		http.Error(w, `{"success": false, "message": "Internal server error"}`, http.StatusInternalServerError)
+		http.Error(w, `{"success": false, "errorMessage": "Internal server error"}`, http.StatusInternalServerError)
 		return
 	}
 
 	objects, err := bucket.List()
 	if err != nil {
 		log.Println(err)
-		http.Error(w, `{"success": false, "message": "Internal server error"}`, http.StatusInternalServerError)
+		http.Error(w, `{"success": false, "errorMessage": "Internal server error"}`, http.StatusInternalServerError)
 		return
 	}
 
 	for _, obj := range objects.Objects {
 		if obj.Key == fileName {
 			w.WriteHeader(http.StatusBadRequest)
-			http.Error(w, `{"success": false, "message": "File already exists"}`, http.StatusBadRequest)
+			http.Error(w, `{"success": false, "errorMessage": "File already exists"}`, http.StatusBadRequest)
 			return
 		}
 	}
 
 	_, err = bucket.Put(fileName, r.Body, &r2.PutOptions{
 		HTTPMetadata: r2.HTTPMetadata{
-			ContentType: contentType,
+			ContentType:  contentType,
+			CacheControl: "public, max-age=604800",
 		},
 		CustomMetadata: map[string]string{
 			"filename": fileName,
@@ -101,19 +113,20 @@ func (h *uploadHandler) upload(w http.ResponseWriter, r *http.Request) {
 	})
 	if err != nil {
 		log.Println(err)
-		http.Error(w, `{"success": false, "message": "Internal server error"}`, http.StatusInternalServerError)
+		http.Error(w, `{"success": false, "errorMessage": "Internal server error"}`, http.StatusInternalServerError)
 		return
 	}
 
 	baseURL := fmt.Sprintf("https://%s", r.Host)
 
-	imageURL := fmt.Sprintf("%s/%s", baseURL, fileName)
+	resourceURL := fmt.Sprintf("%s/%s", baseURL, fileName)
 	deleteURL := fmt.Sprintf("%s/delete?authKey=%s&fileName=%s", baseURL, h.server.AuthKey, fileName)
 
 	resp := uploadResponse{
 		Success: true,
-		Image:   imageURL,
+		File:    resourceURL,
 		Delete:  deleteURL,
+		Error:   "",
 	}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)

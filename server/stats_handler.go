@@ -34,14 +34,14 @@ func (h *statsHandler) stats(w http.ResponseWriter, r *http.Request) {
 	bucket, err := h.server.bucket()
 	if err != nil {
 		log.Println(err)
-		http.Error(w, `{"success": false, "message": "Internal server error"}`, http.StatusInternalServerError)
+		http.Error(w, `{"success": false, "errorMessage": "Internal server error"}`, http.StatusInternalServerError)
 		return
 	}
 
 	objects, err := bucket.List()
 	if err != nil {
 		log.Println(err)
-		http.Error(w, `{"success": false, "message": "Internal server error"}`, http.StatusInternalServerError)
+		http.Error(w, `{"success": false, "errorMessage": "Internal server error"}`, http.StatusInternalServerError)
 		return
 	}
 
