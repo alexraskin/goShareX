@@ -33,6 +33,11 @@ type statsResponse struct {
 }
 
 func (h *statsHandler) stats(w http.ResponseWriter, r *http.Request) {
+	if !authenticate(r, h.server) {
+		h.server.handleError(w, "Invalid authkey", http.StatusUnauthorized, "")
+		return
+	}
+
 	bucket, err := h.server.bucket()
 	if err != nil {
 		h.server.handleError(w, "Internal server error", http.StatusInternalServerError, err.Error())
@@ -47,6 +52,7 @@ func (h *statsHandler) stats(w http.ResponseWriter, r *http.Request) {
 	stats := runtime.MemStats{}
 	runtime.ReadMemStats(&stats)
 
+	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(statsResponse{
 		Success:       true,
 		TinyGoVersion: runtime.Version(),

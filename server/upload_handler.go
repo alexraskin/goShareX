@@ -57,10 +57,11 @@ type uploadResponse struct {
 }
 
 func (h *uploadHandler) upload(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodPost {
-		h.server.handleError(w, "Method not allowed", http.StatusMethodNotAllowed, "")
+	if !authenticate(r, h.server) {
+		h.server.handleError(w, "Invalid authkey", http.StatusUnauthorized, "")
 		return
 	}
+
 	fileSlug := randomID(6)
 
 	contentType := r.Header.Get("Content-Type")
@@ -83,17 +84,14 @@ func (h *uploadHandler) upload(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	objects, err := bucket.List()
+	existing, err := bucket.Head(fileName)
 	if err != nil {
 		h.server.handleError(w, "Internal server error", http.StatusInternalServerError, err.Error())
 		return
 	}
-
-	for _, obj := range objects.Objects {
-		if obj.Key == fileName {
-			h.server.handleError(w, "File already exists", http.StatusBadRequest, "")
-			return
-		}
+	if existing != nil {
+		h.server.handleError(w, "File already exists", http.StatusConflict, "")
+		return
 	}
 
 	_, err = bucket.Put(fileName, r.Body, &r2.PutOptions{
@@ -125,7 +123,6 @@ func (h *uploadHandler) upload(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
 	json.NewEncoder(w).Encode(resp)
-
 }
 
 func randomID(length int) string {

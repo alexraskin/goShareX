@@ -1,7 +1,12 @@
 package server
 
 import (
+	"fmt"
+	"log"
 	"net/http"
+
+	"github.com/syumai/workers/cloudflare"
+	"github.com/syumai/workers/cloudflare/cache"
 )
 
 type deleteHandler struct {
@@ -46,6 +51,21 @@ func (h *deleteHandler) delete(w http.ResponseWriter, r *http.Request) {
 		h.server.handleError(w, "Internal server error", http.StatusInternalServerError, err.Error())
 		return
 	}
+
+	cloudflare.WaitUntil(func() {
+		c := cache.New()
+		resourceURL := fmt.Sprintf("https://%s/%s", r.Host, fileName)
+		purgeReq, err := http.NewRequest(http.MethodGet, resourceURL, nil)
+		if err != nil {
+			log.Printf("cache purge request error: %v", err)
+			return
+		}
+		if err := c.Delete(purgeReq, nil); err != nil {
+			if err != cache.ErrCacheNotFound {
+				log.Printf("cache purge error: %v", err)
+			}
+		}
+	})
 
 	w.WriteHeader(http.StatusOK)
 	w.Write([]byte(`{"success": true}`))

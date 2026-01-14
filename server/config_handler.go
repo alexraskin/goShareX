@@ -18,8 +18,7 @@ func NewConfigHandler(s *Server) http.Handler {
 
 func (h *configHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	if req.Method != http.MethodGet {
-		w.WriteHeader(http.StatusMethodNotAllowed)
-		w.Write([]byte("method not allowed\n"))
+		h.server.handleError(w, "Method not allowed", http.StatusMethodNotAllowed, "")
 		return
 	}
 	h.getConfig(w, req)
@@ -52,7 +51,7 @@ func (h *configHandler) getConfig(w http.ResponseWriter, req *http.Request) {
 
 	config := shareXConfig{
 		Version:         "14.0.1",
-		Name:            "Sadge Uploader",
+		Name:            "goShareX",
 		DestinationType: "ImageUploader, TextUploader, FileUploader",
 		RequestMethod:   "POST",
 		RequestURL:      baseURL + "/upload",
