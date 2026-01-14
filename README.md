@@ -1,6 +1,10 @@
 # GoShareX
 
+[![goShareX Logo](https://sadge.lol/4n9le1.png)](https://sadge.lol/4n9le1.png)
+
 ShareX uploader service built with TinyGo and Cloudflare Workers
+
+- Upload images/videos/files to Cloudflare R2
 
 ## Setup
 
