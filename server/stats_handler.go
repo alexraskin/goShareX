@@ -34,7 +34,7 @@ type statsResponse struct {
 }
 
 func (h *statsHandler) stats(w http.ResponseWriter, r *http.Request) {
-	if !authenticate(r, h.server) {
+	if !h.server.authenticate(r) {
 		h.server.handleError(w, "Invalid authkey", http.StatusUnauthorized, nil)
 		return
 	}

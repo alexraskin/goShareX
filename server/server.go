@@ -48,13 +48,18 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	s.mux.ServeHTTP(w, r)
 }
 
-func authenticate(req *http.Request, s *Server) bool {
+func (s *Server) authenticate(req *http.Request) bool {
 	authKey := req.Header.Get("Authorization")
 	authKey = strings.TrimPrefix(authKey, "Bearer ")
 	if len(authKey) == 0 {
 		return false
 	}
 	return subtle.ConstantTimeCompare([]byte(authKey), []byte(s.AuthKey)) == 1
+}
+
+func validKey(key string) bool {
+	return len(key) > 0 && len(key) <= 255 &&
+		!strings.Contains(key, "/") && !strings.Contains(key, "..")
 }
 
 type errorResponse struct {

@@ -52,11 +52,11 @@ type uploadResponse struct {
 	Success bool   `json:"success"`
 	File    string `json:"fileURL"`
 	Delete  string `json:"deleteURL"`
-	Error   string `json:"errorMessage"`
+	Error   string `json:"errorMessage,omitempty"`
 }
 
 func (h *uploadHandler) upload(w http.ResponseWriter, r *http.Request) {
-	if !authenticate(r, h.server) {
+	if !h.server.authenticate(r) {
 		h.server.handleError(w, "Invalid authkey", http.StatusUnauthorized, nil)
 		return
 	}
@@ -122,7 +122,6 @@ func (h *uploadHandler) upload(w http.ResponseWriter, r *http.Request) {
 		Success: true,
 		File:    resourceURL,
 		Delete:  deleteURL,
-		Error:   "",
 	}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)

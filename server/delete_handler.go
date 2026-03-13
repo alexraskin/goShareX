@@ -5,6 +5,10 @@ import (
 	"net/http"
 )
 
+type deleteResponse struct {
+	Success bool `json:"success"`
+}
+
 type deleteHandler struct {
 	server *Server
 }
@@ -24,14 +28,14 @@ func (h *deleteHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *deleteHandler) delete(w http.ResponseWriter, r *http.Request) {
-	if !authenticate(r, h.server) {
+	if !h.server.authenticate(r) {
 		h.server.handleError(w, "Invalid authkey", http.StatusUnauthorized, nil)
 		return
 	}
 
 	fileName := r.URL.Query().Get("fileName")
-	if fileName == "" {
-		h.server.handleError(w, "Missing filename", http.StatusBadRequest, nil)
+	if !validKey(fileName) {
+		h.server.handleError(w, "Invalid filename", http.StatusBadRequest, nil)
 		return
 	}
 
@@ -49,5 +53,5 @@ func (h *deleteHandler) delete(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(map[string]bool{"success": true})
+	json.NewEncoder(w).Encode(deleteResponse{Success: true})
 }

@@ -38,7 +38,7 @@ type shareXConfig struct {
 }
 
 func (h *configHandler) getConfig(w http.ResponseWriter, req *http.Request) {
-	if !authenticate(req, h.server) {
+	if !h.server.authenticate(req) {
 		h.server.handleError(w, "Invalid authkey", http.StatusUnauthorized, nil)
 		return
 	}

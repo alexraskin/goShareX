@@ -7,6 +7,11 @@ import (
 )
 
 func (s *Server) getKey(w http.ResponseWriter, r *http.Request, key string) {
+	if !validKey(key) {
+		s.handleError(w, "Invalid key", http.StatusBadRequest, nil)
+		return
+	}
+
 	bucket, err := s.bucket()
 	if err != nil {
 		s.handleError(w, "Internal server error", http.StatusInternalServerError, err)
