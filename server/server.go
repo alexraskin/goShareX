@@ -1,6 +1,7 @@
 package server
 
 import (
+	"crypto/subtle"
 	"encoding/json"
 	"log"
 	"net/http"
@@ -9,6 +10,8 @@ import (
 
 	"github.com/syumai/workers/cloudflare/r2"
 )
+
+var _ http.Handler = (*Server)(nil)
 
 type Server struct {
 	AuthKey    string
@@ -36,7 +39,7 @@ func (s *Server) initMux() {
 			s.getKey(w, r, key)
 			return
 		}
-		s.handleError(w, "Not found", http.StatusNotFound, "")
+		s.handleError(w, "Not found", http.StatusNotFound, nil)
 	}))
 }
 
@@ -46,8 +49,12 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 }
 
 func authenticate(req *http.Request, s *Server) bool {
-	authKey := req.URL.Query().Get("authKey")
-	return authKey == s.AuthKey
+	authKey := req.Header.Get("Authorization")
+	authKey = strings.TrimPrefix(authKey, "Bearer ")
+	if len(authKey) == 0 {
+		return false
+	}
+	return subtle.ConstantTimeCompare([]byte(authKey), []byte(s.AuthKey)) == 1
 }
 
 type errorResponse struct {
@@ -55,17 +62,16 @@ type errorResponse struct {
 	ErrorMessage string `json:"errorMessage"`
 }
 
-func (s *Server) handleError(w http.ResponseWriter, message string, status int, errDetail string) {
-	fullMsg := message
-	if errDetail != "" {
-		fullMsg = message + ": " + errDetail
+func (s *Server) handleError(w http.ResponseWriter, message string, status int, err error) {
+	if err != nil {
+		log.Printf("HTTP %d - %s: %v", status, message, err)
+	} else {
+		log.Printf("HTTP %d - %s", status, message)
 	}
-	response := errorResponse{
-		Success:      false,
-		ErrorMessage: fullMsg,
-	}
-	log.Println(response)
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
-	json.NewEncoder(w).Encode(response)
+	json.NewEncoder(w).Encode(errorResponse{
+		Success:      false,
+		ErrorMessage: message,
+	})
 }

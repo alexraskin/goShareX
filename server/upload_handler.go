@@ -3,8 +3,9 @@ package server
 import (
 	"encoding/json"
 	"fmt"
-	"math/rand"
+	"math/rand/v2"
 	"net/http"
+	"strconv"
 	"strings"
 	"time"
 
@@ -29,8 +30,6 @@ var extensionMap = map[string]string{
 	"application/pdf": "pdf",
 }
 
-var seededRand = rand.New(rand.NewSource(time.Now().UnixNano()))
-
 type uploadHandler struct {
 	server *Server
 }
@@ -43,7 +42,7 @@ func NewUploadHandler(s *Server) http.Handler {
 
 func (h *uploadHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
-		h.server.handleError(w, "Method not allowed", http.StatusMethodNotAllowed, "")
+		h.server.handleError(w, "Method not allowed", http.StatusMethodNotAllowed, nil)
 		return
 	}
 	h.upload(w, r)
@@ -58,40 +57,44 @@ type uploadResponse struct {
 
 func (h *uploadHandler) upload(w http.ResponseWriter, r *http.Request) {
 	if !authenticate(r, h.server) {
-		h.server.handleError(w, "Invalid authkey", http.StatusUnauthorized, "")
+		h.server.handleError(w, "Invalid authkey", http.StatusUnauthorized, nil)
 		return
 	}
-
-	fileSlug := randomID(6)
 
 	contentType := r.Header.Get("Content-Type")
-	contentLength := r.Header.Get("Content-Length")
 
-	if contentType == "" || contentLength == "" {
-		h.server.handleError(w, "Missing content-length or content-type", http.StatusBadRequest, "")
+	if contentType == "" || r.ContentLength == 0 {
+		h.server.handleError(w, "Missing content-type or content-length", http.StatusBadRequest, nil)
 		return
 	}
 
-	fileExt, ok := extensionMap[contentType]
-	fileName := fileSlug
-	if ok {
-		fileName += "." + fileExt
-	}
+	ext, ok := extensionMap[contentType]
 
 	bucket, err := h.server.bucket()
 	if err != nil {
-		h.server.handleError(w, "Internal server error", http.StatusInternalServerError, err.Error())
+		h.server.handleError(w, "Internal server error", http.StatusInternalServerError, err)
 		return
 	}
 
-	existing, err := bucket.Head(fileName)
-	if err != nil {
-		h.server.handleError(w, "Internal server error", http.StatusInternalServerError, err.Error())
-		return
-	}
-	if existing != nil {
-		h.server.handleError(w, "File already exists", http.StatusConflict, "")
-		return
+	const maxRetries = 5
+	var fileName string
+	for i := 0; i < maxRetries; i++ {
+		fileName = randomID(6)
+		if ok {
+			fileName += "." + ext
+		}
+		existing, err := bucket.Head(fileName)
+		if err != nil {
+			h.server.handleError(w, "Internal server error", http.StatusInternalServerError, err)
+			return
+		}
+		if existing == nil {
+			break
+		}
+		if i == maxRetries-1 {
+			h.server.handleError(w, "Failed to generate unique file ID", http.StatusInternalServerError, nil)
+			return
+		}
 	}
 
 	_, err = bucket.Put(fileName, r.Body, &r2.PutOptions{
@@ -102,17 +105,18 @@ func (h *uploadHandler) upload(w http.ResponseWriter, r *http.Request) {
 		CustomMetadata: map[string]string{
 			"filename": fileName,
 			"date":     time.Now().Format(time.RFC3339),
+			"size":     strconv.FormatInt(r.ContentLength, 10),
 		},
 	})
 	if err != nil {
-		h.server.handleError(w, "Internal server error", http.StatusInternalServerError, err.Error())
+		h.server.handleError(w, "Internal server error", http.StatusInternalServerError, err)
 		return
 	}
 
 	baseURL := fmt.Sprintf("https://%s", r.Host)
 
 	resourceURL := fmt.Sprintf("%s/%s", baseURL, fileName)
-	deleteURL := fmt.Sprintf("%s/delete?authKey=%s&fileName=%s", baseURL, h.server.AuthKey, fileName)
+	deleteURL := fmt.Sprintf("%s/delete?fileName=%s", baseURL, fileName)
 
 	resp := uploadResponse{
 		Success: true,
@@ -129,7 +133,7 @@ func randomID(length int) string {
 	const letters = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
 	var id strings.Builder
 	for i := 0; i < length; i++ {
-		id.WriteByte(letters[seededRand.Intn(len(letters))])
+		id.WriteByte(letters[rand.IntN(len(letters))])
 	}
 	return id.String()
 }

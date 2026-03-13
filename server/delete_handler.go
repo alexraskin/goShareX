@@ -1,12 +1,8 @@
 package server
 
 import (
-	"fmt"
-	"log"
+	"encoding/json"
 	"net/http"
-
-	"github.com/syumai/workers/cloudflare"
-	"github.com/syumai/workers/cloudflare/cache"
 )
 
 type deleteHandler struct {
@@ -20,9 +16,8 @@ func NewDeleteHandler(s *Server) http.Handler {
 }
 
 func (h *deleteHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodGet {
-		w.WriteHeader(http.StatusMethodNotAllowed)
-		w.Write([]byte("method not allowed\n"))
+	if r.Method != http.MethodDelete {
+		h.server.handleError(w, "Method not allowed", http.StatusMethodNotAllowed, nil)
 		return
 	}
 	h.delete(w, r)
@@ -30,43 +25,29 @@ func (h *deleteHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 func (h *deleteHandler) delete(w http.ResponseWriter, r *http.Request) {
 	if !authenticate(r, h.server) {
-		h.server.handleError(w, "Invalid authkey", http.StatusUnauthorized, "")
+		h.server.handleError(w, "Invalid authkey", http.StatusUnauthorized, nil)
 		return
 	}
 
 	fileName := r.URL.Query().Get("fileName")
 	if fileName == "" {
-		h.server.handleError(w, "Missing filename", http.StatusBadRequest, "")
+		h.server.handleError(w, "Missing filename", http.StatusBadRequest, nil)
 		return
 	}
 
 	bucket, err := h.server.bucket()
 	if err != nil {
-		h.server.handleError(w, "Internal server error", http.StatusInternalServerError, err.Error())
+		h.server.handleError(w, "Internal server error", http.StatusInternalServerError, err)
 		return
 	}
 
 	err = bucket.Delete(fileName)
 	if err != nil {
-		h.server.handleError(w, "Internal server error", http.StatusInternalServerError, err.Error())
+		h.server.handleError(w, "Internal server error", http.StatusInternalServerError, err)
 		return
 	}
 
-	cloudflare.WaitUntil(func() {
-		c := cache.New()
-		resourceURL := fmt.Sprintf("https://%s/%s", r.Host, fileName)
-		purgeReq, err := http.NewRequest(http.MethodGet, resourceURL, nil)
-		if err != nil {
-			log.Printf("cache purge request error: %v", err)
-			return
-		}
-		if err := c.Delete(purgeReq, nil); err != nil {
-			if err != cache.ErrCacheNotFound {
-				log.Printf("cache purge error: %v", err)
-			}
-		}
-	})
-
+	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	w.Write([]byte(`{"success": true}`))
+	json.NewEncoder(w).Encode(map[string]bool{"success": true})
 }

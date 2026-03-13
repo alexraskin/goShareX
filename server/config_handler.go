@@ -18,33 +18,28 @@ func NewConfigHandler(s *Server) http.Handler {
 
 func (h *configHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	if req.Method != http.MethodGet {
-		h.server.handleError(w, "Method not allowed", http.StatusMethodNotAllowed, "")
+		h.server.handleError(w, "Method not allowed", http.StatusMethodNotAllowed, nil)
 		return
 	}
 	h.getConfig(w, req)
 }
 
 type shareXConfig struct {
-	Version         string     `json:"Version"`
-	Name            string     `json:"Name"`
-	DestinationType string     `json:"DestinationType"`
-	RequestMethod   string     `json:"RequestMethod"`
-	RequestURL      string     `json:"RequestURL"`
-	Parameters      parameters `json:"Parameters"`
-	Body            string     `json:"Body"`
-	FileFormName    string     `json:"FileFormName"`
-	URL             string     `json:"URL"`
-	DeletionURL     string     `json:"DeletionURL"`
-	ErrorMessage    string     `json:"ErrorMessage"`
-}
-
-type parameters struct {
-	AuthKey string `json:"authKey"`
+	Version         string            `json:"Version"`
+	Name            string            `json:"Name"`
+	DestinationType string            `json:"DestinationType"`
+	RequestMethod   string            `json:"RequestMethod"`
+	RequestURL      string            `json:"RequestURL"`
+	Headers         map[string]string `json:"Headers"`
+	Body            string            `json:"Body"`
+	URL             string            `json:"URL"`
+	DeletionURL     string            `json:"DeletionURL"`
+	ErrorMessage    string            `json:"ErrorMessage"`
 }
 
 func (h *configHandler) getConfig(w http.ResponseWriter, req *http.Request) {
 	if !authenticate(req, h.server) {
-		h.server.handleError(w, "Invalid authkey", http.StatusUnauthorized, "")
+		h.server.handleError(w, "Invalid authkey", http.StatusUnauthorized, nil)
 		return
 	}
 	baseURL := fmt.Sprintf("https://%s", req.Host)
@@ -55,11 +50,10 @@ func (h *configHandler) getConfig(w http.ResponseWriter, req *http.Request) {
 		DestinationType: "ImageUploader, TextUploader, FileUploader",
 		RequestMethod:   "POST",
 		RequestURL:      baseURL + "/upload",
-		Parameters: parameters{
-			AuthKey: h.server.AuthKey,
+		Headers: map[string]string{
+			"Authorization": "Bearer " + h.server.AuthKey,
 		},
 		Body:         "Binary",
-		FileFormName: "file",
 		URL:          "{json:fileURL}",
 		DeletionURL:  "{json:deleteURL}",
 		ErrorMessage: "{json:errorMessage}",
